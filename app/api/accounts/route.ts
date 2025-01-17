@@ -11,9 +11,23 @@ interface Account {
   lastUpdated: Date
 }
 
-const prisma = new PrismaClient()
+// PrismaClient inicializálása
+let prisma: PrismaClient
+
+if (process.env.NODE_ENV === 'production') {
+  prisma = new PrismaClient()
+} else {
+  // @ts-ignore
+  if (!global.prisma) {
+    // @ts-ignore
+    global.prisma = new PrismaClient()
+  }
+  // @ts-ignore
+  prisma = global.prisma
+}
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function GET() {
   try {
@@ -50,18 +64,18 @@ export async function POST(request: Request) {
       )
     }
 
-    // Ellenőrizzük, hogy létezik-e már a fiók
-    const existingAccount = await prisma.account.findFirst({
-      where: {
-        platform: body.platform,
-        username: body.username
-      }
-    })
-
-    console.log('POST /api/accounts - Létező fiók:', existingAccount)
-
-    let account: Account;
     try {
+      // Ellenőrizzük, hogy létezik-e már a fiók
+      const existingAccount = await prisma.account.findFirst({
+        where: {
+          platform: body.platform,
+          username: body.username
+        }
+      })
+
+      console.log('POST /api/accounts - Létező fiók:', existingAccount)
+
+      let account: Account;
       if (existingAccount) {
         // Ha létezik, frissítjük
         account = await prisma.account.update({
@@ -71,7 +85,7 @@ export async function POST(request: Request) {
           data: {
             totalMessages: body.totalMessages || 0,
             unreadMessages: body.unreadMessages || 0,
-            oldestUnreadMessage: body.oldestUnreadMessage || new Date().toISOString(),
+            oldestUnreadMessage: body.oldestUnreadMessage || '',
             lastUpdated: new Date()
           }
         })
@@ -84,7 +98,7 @@ export async function POST(request: Request) {
             username: body.username,
             totalMessages: body.totalMessages || 0,
             unreadMessages: body.unreadMessages || 0,
-            oldestUnreadMessage: body.oldestUnreadMessage || new Date().toISOString(),
+            oldestUnreadMessage: body.oldestUnreadMessage || '',
             lastUpdated: new Date()
           }
         })
@@ -101,14 +115,14 @@ export async function POST(request: Request) {
     } catch (dbError) {
       console.error('POST /api/accounts - Adatbázis művelet hiba:', dbError)
       return NextResponse.json(
-        { error: 'Adatbázis művelet hiba történt' },
+        { error: 'Adatbázis művelet hiba történt: ' + (dbError as Error).message },
         { status: 500 }
       )
     }
   } catch (error) {
     console.error('POST /api/accounts - Általános hiba:', error)
     return NextResponse.json(
-      { error: 'Szerver oldali hiba történt' },
+      { error: 'Szerver oldali hiba történt: ' + (error as Error).message },
       { status: 500 }
     )
   }
