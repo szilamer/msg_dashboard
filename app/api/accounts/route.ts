@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client/edge'
 
-// Explicit Node.js runtime
-export const runtime = 'nodejs'
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
 
-// Singleton pattern a PrismaClient-hez
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-const prisma = globalForPrisma.prisma ?? new PrismaClient()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+const prisma = new PrismaClient()
 
 export async function GET() {
   try {
