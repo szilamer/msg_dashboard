@@ -7,7 +7,6 @@ export async function GET() {
   let browser = null
 
   try {
-    console.log('API: Puppeteer indítása...')
     browser = await puppeteer.launch({
       args: [
         '--no-sandbox',
@@ -24,54 +23,40 @@ export async function GET() {
     })
 
     const page = await browser.newPage()
-    console.log('API: Új oldal megnyitva')
-    
-    await page.goto('https://web.whatsapp.com', { waitUntil: 'networkidle0' })
-    console.log('API: WhatsApp Web betöltve')
+    await page.goto('https://web.whatsapp.com')
 
-    try {
-      await page.waitForSelector('div[data-testid="chat-list"]', { timeout: 5000 })
-      console.log('API: Chat lista megtalálva!')
+    // Várunk a chat lista megjelenésére
+    await page.waitForSelector('div[data-testid="chat-list"]', { timeout: 10000 })
 
-      // Adatok kinyerése
-      const stats = await page.evaluate(() => {
-        const totalChats = document.querySelectorAll('div[data-testid="chat-list"] > div').length
-        const unreadChats = document.querySelectorAll('div[data-testid="chat-list"] span[data-testid*="unread"]')
-        const unreadCount = Array.from(unreadChats).reduce((sum, span) => {
-          const count = parseInt(span.textContent || '0', 10)
-          return sum + (isNaN(count) ? 1 : count)
-        }, 0)
+    // Adatok kinyerése
+    const stats = await page.evaluate(() => {
+      const totalChats = document.querySelectorAll('div[data-testid="chat-list"] > div').length
+      const unreadChats = document.querySelectorAll('div[data-testid="chat-list"] span[data-testid*="unread"]')
+      const unreadCount = Array.from(unreadChats).reduce((sum, span) => {
+        const count = parseInt(span.textContent || '0', 10)
+        return sum + (isNaN(count) ? 1 : count)
+      }, 0)
 
-        let oldestUnread = ''
-        if (unreadChats.length > 0) {
-          const firstUnreadChat = unreadChats[0].closest('div[data-testid="cell-frame-container"]')
-          const timeElement = firstUnreadChat?.querySelector('span[data-testid*="last-msg-time"]')
-          oldestUnread = timeElement?.textContent || ''
-        }
+      let oldestUnread = ''
+      if (unreadChats.length > 0) {
+        const firstUnreadChat = unreadChats[0].closest('div[data-testid="cell-frame-container"]')
+        const timeElement = firstUnreadChat?.querySelector('span[data-testid*="last-msg-time"]')
+        oldestUnread = timeElement?.textContent || ''
+      }
 
-        return {
-          totalMessages: totalChats,
-          unreadMessages: unreadCount,
-          oldestUnreadMessage: oldestUnread
-        }
-      })
-
-      console.log('API: Kinyert adatok:', stats)
-      return NextResponse.json({ isLoggedIn: true, stats })
-    } catch (error) {
-      console.log('API: Chat lista nem található')
-      return NextResponse.json({ isLoggedIn: false })
-    }
-  } catch (error) {
-    console.error('API: Hiba:', error)
-    return NextResponse.json({ 
-      isLoggedIn: false, 
-      error: error instanceof Error ? error.message : 'Ismeretlen hiba történt' 
+      return {
+        totalMessages: totalChats,
+        unreadMessages: unreadCount,
+        oldestUnreadMessage: oldestUnread
+      }
     })
+
+    return NextResponse.json({ stats })
+  } catch (error) {
+    return NextResponse.json({ error: 'Nem sikerült lekérni az adatokat' })
   } finally {
     if (browser) {
       await browser.close()
-      console.log('API: Browser bezárva')
     }
   }
 } 
