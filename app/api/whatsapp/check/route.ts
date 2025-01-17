@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import puppeteer from 'puppeteer-core'
-import chrome from 'chrome-aws-lambda'
 
 export const runtime = 'nodejs'
 
@@ -10,8 +9,17 @@ export async function GET() {
   try {
     // Puppeteer indítása
     browser = await puppeteer.launch({
-      args: chrome.args,
-      executablePath: await chrome.executablePath,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ],
+      executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
       headless: true,
     })
 
@@ -68,7 +76,10 @@ export async function GET() {
     return NextResponse.json({ isLoggedIn: true, stats })
   } catch (error) {
     console.error('WhatsApp ellenőrzési hiba:', error)
-    return NextResponse.json({ isLoggedIn: false, error: error.message })
+    return NextResponse.json({ 
+      isLoggedIn: false, 
+      error: error instanceof Error ? error.message : 'Ismeretlen hiba történt' 
+    })
   } finally {
     if (browser) {
       await browser.close()
