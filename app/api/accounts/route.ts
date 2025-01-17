@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client/edge'
 
-const prisma = new PrismaClient().$extends({})
+const prisma = new PrismaClient()
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
