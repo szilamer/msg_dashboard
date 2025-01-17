@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import WhatsAppStats from './WhatsAppStats'
 
 interface WhatsAppStats {
@@ -14,6 +14,7 @@ export default function WhatsAppLogin({ onSuccess }: { onSuccess: () => void }) 
   const [stats, setStats] = useState<WhatsAppStats | null>(null)
   const [checkCount, setCheckCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const checkCountRef = useRef(0)
 
   const handleRefresh = async () => {
     try {
@@ -46,6 +47,7 @@ export default function WhatsAppLogin({ onSuccess }: { onSuccess: () => void }) 
       setError('')
       setStats(null)
       setCheckCount(0)
+      checkCountRef.current = 0
 
       console.log('WhatsApp bejelentkezés indítása...')
       const whatsappWindow = window.open('https://web.whatsapp.com', 'WhatsApp Web', 'width=800,height=600')
@@ -64,8 +66,9 @@ export default function WhatsAppLogin({ onSuccess }: { onSuccess: () => void }) 
             return
           }
 
-          setCheckCount(prev => prev + 1)
-          console.log(`Bejelentkezés ellenőrzése (${checkCount + 1}. próba)...`)
+          checkCountRef.current += 1
+          setCheckCount(checkCountRef.current)
+          console.log(`Bejelentkezés ellenőrzése (${checkCountRef.current}. próba)...`)
 
           // Ellenőrizzük, hogy be van-e jelentkezve
           const response = await fetch('/api/whatsapp/check')
@@ -79,7 +82,7 @@ export default function WhatsAppLogin({ onSuccess }: { onSuccess: () => void }) 
             setStats(data.stats)
             onSuccess()
             setLoading(false)
-          } else if (checkCount >= 30) { // 30 próba után (1 perc) feladjuk
+          } else if (checkCountRef.current >= 30) { // 30 próba után feladjuk
             console.log('Időtúllépés: nem sikerült bejelentkezni')
             clearInterval(checkLogin)
             whatsappWindow.close()
@@ -89,7 +92,7 @@ export default function WhatsAppLogin({ onSuccess }: { onSuccess: () => void }) 
         } catch (err) {
           console.error('Hiba a bejelentkezés ellenőrzésekor:', err)
         }
-      }, 2000)
+      }, 1000) // Gyakrabban ellenőrizzük (1 másodpercenként)
 
     } catch (err) {
       console.error('Hiba a bejelentkezés során:', err)
