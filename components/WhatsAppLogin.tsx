@@ -1,16 +1,12 @@
 'use client'
 import { useState } from 'react'
-import WhatsAppStats from './WhatsAppStats'
 
-interface WhatsAppStats {
-  totalMessages: number
-  unreadMessages: number
-  oldestUnreadMessage: string
+interface Props {
+  onFetchStats: () => void;
 }
 
-export default function WhatsAppLogin() {
+export default function WhatsAppLogin({ onFetchStats }: Props) {
   const [loading, setLoading] = useState(false)
-  const [stats, setStats] = useState<WhatsAppStats | null>(null)
 
   const handleLogin = () => {
     window.open('https://web.whatsapp.com', 'WhatsApp Web', 'width=800,height=600')
@@ -19,12 +15,7 @@ export default function WhatsAppLogin() {
   const handleCheck = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/whatsapp/check')
-      const data = await response.json()
-      
-      if (data.stats) {
-        setStats(data.stats)
-      }
+      await onFetchStats()
     } catch (error) {
       console.error('Hiba:', error)
     } finally {
@@ -69,8 +60,6 @@ export default function WhatsAppLogin() {
           </p>
         </div>
       </div>
-
-      {stats && <WhatsAppStats stats={stats} />}
     </div>
   )
 } 
