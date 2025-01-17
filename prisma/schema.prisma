@@ -8,13 +8,13 @@ datasource db {
 }
 
 model Account {
-  id                    String   @id @default(cuid())
-  platform             String   // "whatsapp", "skype", "messenger"
+  id                   String    @id @default(cuid())
+  platform             String    
   username             String
-  totalMessages        Int      @default(0)
-  unreadMessages       Int      @default(0)
+  totalMessages        Int       @default(0)
+  unreadMessages       Int       @default(0)
   oldestUnreadMessage  DateTime?
-  lastUpdated          DateTime @default(now())
+  lastUpdated          DateTime  @default(now())
 
   @@unique([platform, username])
 } 
