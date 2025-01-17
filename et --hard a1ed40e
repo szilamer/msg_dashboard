@@ -1,0 +1,5 @@
+[33mdf77827[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m fix: Egyszerűsített működés
+[33m27c61f5[m fix: Egyszerűsített bejelentkezés és frissítés
+[33m8f07f61[m fix: Bejelentkezés ellenőrzés javítása
+[33mf325f40[m fix: Kliens oldali komponensek javítása
+[33ma1ed40e[m feat: Frissítés gomb és jobb időzítések
