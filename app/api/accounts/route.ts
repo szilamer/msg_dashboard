@@ -11,38 +11,17 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const accounts = await prisma.account.findMany({
-      select: {
-        id: true,
-        platform: true,
-        username: true,
-        totalMessages: true,
-        unreadMessages: true,
-        oldestUnreadMessage: true,
-        lastUpdated: true
+      orderBy: {
+        lastUpdated: 'desc'
       }
     })
 
-    // Ha nincsenek fiókok, üres tömböt küldünk vissza
-    if (!accounts || accounts.length === 0) {
-      return NextResponse.json([])
-    }
-
-    // Átalakítjuk az adatokat a frontend által várt formátumra
-    const formattedAccounts = accounts.map(account => ({
-      id: account.id.toString(),
-      platform: account.platform || '',
-      username: account.username || '',
-      totalMessages: account.totalMessages || 0,
-      unreadMessages: account.unreadMessages || 0,
-      oldestUnreadMessage: account.oldestUnreadMessage || null,
-      lastUpdated: account.lastUpdated ? account.lastUpdated.toISOString() : new Date().toISOString()
-    }))
-
-    return NextResponse.json(formattedAccounts)
+    return NextResponse.json(accounts.map(account => ({
+      ...account,
+      id: account.id.toString()
+    })))
   } catch (error) {
-    console.error('Error fetching accounts:', error)
-    // Ha adatbázis hiba van, üres tömböt küldünk vissza 200-as státusszal
-    // hogy a frontend ne dobjon hibát
+    console.error('Hiba a fiókok lekérdezése során:', error)
     return NextResponse.json([])
   }
 }
@@ -51,7 +30,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     
-    // Ellenőrizzük a kötelező mezőket
+    // Validáljuk a kötelező mezőket
     if (!body.platform || !body.username) {
       return NextResponse.json(
         { error: 'A platform és felhasználónév megadása kötelező' },
@@ -59,21 +38,53 @@ export async function POST(request: Request) {
       )
     }
 
-    const account = await prisma.account.create({
-      data: {
+    // Ellenőrizzük, hogy létezik-e már a fiók
+    const existingAccount = await prisma.account.findFirst({
+      where: {
         platform: body.platform,
-        username: body.username,
-        totalMessages: body.totalMessages || 0,
-        unreadMessages: body.unreadMessages || 0,
-        oldestUnreadMessage: body.oldestUnreadMessage || new Date().toISOString(),
-        lastUpdated: new Date()
+        username: body.username
       }
     })
-    return NextResponse.json(account)
+
+    let account;
+    if (existingAccount) {
+      // Ha létezik, frissítjük
+      account = await prisma.account.update({
+        where: {
+          id: existingAccount.id
+        },
+        data: {
+          totalMessages: body.totalMessages || 0,
+          unreadMessages: body.unreadMessages || 0,
+          oldestUnreadMessage: body.oldestUnreadMessage || new Date().toISOString(),
+          lastUpdated: new Date()
+        }
+      })
+    } else {
+      // Ha nem létezik, létrehozzuk
+      account = await prisma.account.create({
+        data: {
+          platform: body.platform,
+          username: body.username,
+          totalMessages: body.totalMessages || 0,
+          unreadMessages: body.unreadMessages || 0,
+          oldestUnreadMessage: body.oldestUnreadMessage || new Date().toISOString(),
+          lastUpdated: new Date()
+        }
+      })
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...account,
+        id: account.id.toString()
+      }
+    })
   } catch (error) {
-    console.error('Error creating account:', error)
+    console.error('Hiba a fiók mentése során:', error)
     return NextResponse.json(
-      { error: 'Nem sikerült létrehozni a fiókot' },
+      { error: 'Hiba történt a fiók mentése során' },
       { status: 500 }
     )
   }
