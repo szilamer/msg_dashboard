@@ -4,26 +4,26 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@prisma/client": "5.8.1",
-    "@prisma/extension-accelerate": "^1.2.1",
-    "next": "^15.1.5",
+    "@prisma/extension-accelerate": "^0.6.2",
+    "next": "14.0.4",
     "puppeteer-core": "21.7.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   },
   "devDependencies": {
     "@types/node": "20.11.5",
     "@types/react": "18.2.48",
     "@types/react-dom": "18.2.18",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.5.1",
+    "autoprefixer": "10.4.17",
+    "postcss": "8.4.33",
     "prisma": "5.8.1",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "3.4.1",
     "typescript": "5.3.3"
   }
 }
