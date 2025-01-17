@@ -3,6 +3,13 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+export const config = {
+  api: {
+    bodyParser: true,
+    externalResolver: true,
+  },
+}
+
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
