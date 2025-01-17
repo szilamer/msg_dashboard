@@ -62,17 +62,12 @@ export default function WhatsAppLogin({ onFetchStats }: Props) {
     try {
       setLoading(true)
 
-      // Teszt adatok küldése
+      // Adatok lekérése a szervertől
       const response = await fetch('/api/whatsapp/check', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          totalMessages: 10, // Teszt adat
-          unreadMessages: 5, // Teszt adat
-          oldestUnreadMessage: '10:30' // Teszt adat
-        }),
+        }
       })
 
       if (!response.ok) {
