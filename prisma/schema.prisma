@@ -4,17 +4,17 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env.DATABASE_URL
+  url      = env("DATABASE_URL")
 }
 
 model Account {
-  id                   String    @id @default(cuid())
-  platform             String    
-  username             String
-  totalMessages        Int       @default(0)
-  unreadMessages       Int       @default(0)
-  oldestUnreadMessage  DateTime?
-  lastUpdated          DateTime  @default(now())
+  id                 Int      @id @default(autoincrement())
+  platform           String
+  username           String
+  totalMessages      Int
+  unreadMessages     Int
+  oldestUnreadMessage String
+  lastUpdated        DateTime @default(now())
 
-  @@unique([platform, username])
+  @@unique([platform, username], name: "platform_username")
 } 
