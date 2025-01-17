@@ -1,21 +1,16 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import puppeteer from 'puppeteer-core'
-import chromium from '@sparticuz/chromium'
-
-const prisma = new PrismaClient()
 
 export async function POST(request: Request) {
   let browser = null
 
   try {
-    // Puppeteer indítása
+    // Puppeteer indítása lokális Chrome-mal
     browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: true,
-      ignoreHTTPSErrors: true,
+      headless: false, // Látható böngésző ablak
+      executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', // Windows Chrome útvonal
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      defaultViewport: null
     })
 
     const page = await browser.newPage()
@@ -26,7 +21,7 @@ export async function POST(request: Request) {
     await page.goto('https://web.whatsapp.com')
 
     // Várunk a chat lista megjelenésére
-    await page.waitForSelector('div[data-testid="chat-list"]', { timeout: 30000 })
+    await page.waitForSelector('div[data-testid="chat-list"]', { timeout: 60000 }) // Hosszabb timeout
 
     // Adatok kinyerése
     const stats = await page.evaluate(() => {
@@ -51,31 +46,7 @@ export async function POST(request: Request) {
       }
     })
 
-    // Adatok mentése az adatbázisba
-    const account = await prisma.account.upsert({
-      where: {
-        platform_username: {
-          platform: 'whatsapp',
-          username: 'default'
-        }
-      },
-      update: {
-        totalMessages: stats.totalMessages,
-        unreadMessages: stats.unreadMessages,
-        oldestUnreadMessage: stats.oldestUnreadMessage,
-        lastUpdated: new Date()
-      },
-      create: {
-        platform: 'whatsapp',
-        username: 'default',
-        totalMessages: stats.totalMessages,
-        unreadMessages: stats.unreadMessages,
-        oldestUnreadMessage: stats.oldestUnreadMessage,
-        lastUpdated: new Date()
-      }
-    })
-
-    return NextResponse.json({ success: true, account })
+    return NextResponse.json({ success: true, stats })
   } catch (error: any) {
     console.error('Hiba történt:', error)
     return NextResponse.json({ error: 'Nem sikerült lekérni az adatokat', details: error.message })

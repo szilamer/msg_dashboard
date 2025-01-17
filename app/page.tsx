@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import WhatsAppLogin from '@/components/WhatsAppLogin'
 import WhatsAppStats from '@/components/WhatsAppStats'
 
@@ -12,23 +12,20 @@ export default function Home() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/accounts?platform=whatsapp');
+      const response = await fetch('/api/whatsapp/check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       const data = await response.json();
-      if (data.account) {
-        setWhatsAppStats({
-          totalMessages: data.account.totalMessages,
-          unreadMessages: data.account.unreadMessages,
-          oldestUnreadMessage: data.account.oldestUnreadMessage
-        });
+      if (data.stats) {
+        setWhatsAppStats(data.stats);
       }
     } catch (error) {
       console.error('Hiba történt az adatok lekérése közben:', error);
     }
   };
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
 
   return (
     <main className="container mx-auto p-4">
