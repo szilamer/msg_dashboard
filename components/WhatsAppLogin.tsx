@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface Props {
   onFetchStats: () => void;
@@ -7,17 +7,62 @@ interface Props {
 
 export default function WhatsAppLogin({ onFetchStats }: Props) {
   const [loading, setLoading] = useState(false)
-  const [showWhatsApp, setShowWhatsApp] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const whatsappWindow = useRef<Window | null>(null)
+  const checkInterval = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    // Ellenőrizzük, hogy be van-e jelentkezve
+    const checkLoginStatus = () => {
+      if (whatsappWindow.current && !whatsappWindow.current.closed) {
+        try {
+          const url = whatsappWindow.current.location.href
+          if (url.includes('web.whatsapp.com') && !url.includes('/accept')) {
+            setIsLoggedIn(true)
+            if (checkInterval.current) {
+              clearInterval(checkInterval.current)
+            }
+          }
+        } catch (error) {
+          // CORS hiba esetén nem tudunk hozzáférni a location.href-hez
+          // de ez nem baj, folytatjuk az ellenőrzést
+        }
+      }
+    }
+
+    return () => {
+      if (checkInterval.current) {
+        clearInterval(checkInterval.current)
+      }
+    }
+  }, [])
 
   const handleLogin = () => {
-    setShowWhatsApp(true)
+    // Új ablak nyitása
+    whatsappWindow.current = window.open(
+      'https://web.whatsapp.com',
+      'WhatsApp Web',
+      'width=1000,height=800,top=50,left=50'
+    )
+
+    // Ellenőrzés indítása
+    if (checkInterval.current) {
+      clearInterval(checkInterval.current)
+    }
+    checkInterval.current = setInterval(() => {
+      if (whatsappWindow.current && whatsappWindow.current.closed) {
+        if (checkInterval.current) {
+          clearInterval(checkInterval.current)
+        }
+      }
+    }, 1000)
   }
 
   const handleCheck = async () => {
     try {
       setLoading(true)
-      
-      // Küldjük el az adatokat a szervernek
+
+      // Teszt adatok küldése
       const response = await fetch('/api/whatsapp/check', {
         method: 'POST',
         headers: {
@@ -59,7 +104,7 @@ export default function WhatsAppLogin({ onFetchStats }: Props) {
               text-white
             `}
           >
-            Bejelentkezés WhatsApp-ba
+            {isLoggedIn ? 'WhatsApp Web megnyitása' : 'Bejelentkezés WhatsApp-ba'}
           </button>
 
           <button
@@ -81,29 +126,6 @@ export default function WhatsAppLogin({ onFetchStats }: Props) {
           </p>
         </div>
       </div>
-
-      {showWhatsApp && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="text-lg font-semibold">WhatsApp Web</h3>
-              <button
-                onClick={() => setShowWhatsApp(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                Bezárás
-              </button>
-            </div>
-            <div className="h-[600px]">
-              <iframe
-                src="https://web.whatsapp.com"
-                className="w-full h-full"
-                allow="camera;microphone"
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 } 
