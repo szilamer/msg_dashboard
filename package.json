@@ -2,7 +2,6 @@
   "name": "msg_dashboard2",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -12,7 +11,8 @@
   "dependencies": {
     "@prisma/client": "^5.8.1",
     "next": "14.1.0",
-    "node-fetch": "^3.3.2",
+    "puppeteer-core": "10.1.0",
+    "chrome-aws-lambda": "10.1.0",
     "react": "^18",
     "react-dom": "^18"
   },
