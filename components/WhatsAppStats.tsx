@@ -1,3 +1,5 @@
+'use client'
+
 interface WhatsAppStats {
   totalMessages: number;
   unreadMessages: number;
