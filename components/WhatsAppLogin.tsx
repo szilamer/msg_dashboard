@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 interface Props {
   onFetchStats: () => void;
@@ -7,46 +7,27 @@ interface Props {
 
 export default function WhatsAppLogin({ onFetchStats }: Props) {
   const [loading, setLoading] = useState(false)
-  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false)
+  const [showWhatsApp, setShowWhatsApp] = useState(false)
 
   const handleLogin = () => {
-    setIsWhatsAppOpen(true)
-    // Átirányítás a WhatsApp Web-re
-    window.location.href = 'https://web.whatsapp.com'
+    setShowWhatsApp(true)
   }
 
   const handleCheck = async () => {
     try {
       setLoading(true)
-
-      // Adatok kinyerése
-      const totalChats = document.querySelectorAll('div[data-testid="chat-list"] > div').length
-      const unreadChats = document.querySelectorAll('div[data-testid="chat-list"] span[data-testid*="unread"]')
-      const unreadCount = Array.from(unreadChats).reduce((sum, span) => {
-        const count = parseInt(span.textContent || '0', 10)
-        return sum + (isNaN(count) ? 1 : count)
-      }, 0)
-
-      let oldestUnread = ''
-      if (unreadChats.length > 0) {
-        const firstUnreadChat = unreadChats[0].closest('div[data-testid="cell-frame-container"]')
-        const timeElement = firstUnreadChat?.querySelector('span[data-testid*="last-msg-time"]')
-        oldestUnread = timeElement?.textContent || ''
-      }
-
-      const data = {
-        totalMessages: totalChats,
-        unreadMessages: unreadCount,
-        oldestUnreadMessage: oldestUnread
-      }
-
+      
       // Küldjük el az adatokat a szervernek
       const response = await fetch('/api/whatsapp/check', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          totalMessages: 10, // Teszt adat
+          unreadMessages: 5, // Teszt adat
+          oldestUnreadMessage: '10:30' // Teszt adat
+        }),
       })
 
       if (!response.ok) {
@@ -61,29 +42,6 @@ export default function WhatsAppLogin({ onFetchStats }: Props) {
     } finally {
       setLoading(false)
     }
-  }
-
-  if (isWhatsAppOpen) {
-    return (
-      <div className="space-y-4">
-        <div className="p-4 border rounded-lg bg-white shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">WhatsApp Web</h2>
-          <div className="space-y-4">
-            <button
-              onClick={() => setIsWhatsAppOpen(false)}
-              className="w-full py-2 px-4 rounded bg-gray-500 hover:bg-gray-600 text-white"
-            >
-              Vissza az alkalmazáshoz
-            </button>
-            <p className="text-sm text-gray-600">
-              1. Olvasd be a QR kódot a telefonoddal<br />
-              2. Kattints a "Vissza az alkalmazáshoz" gombra<br />
-              3. Kattints az "Adatok lekérése" gombra
-            </p>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -123,6 +81,29 @@ export default function WhatsAppLogin({ onFetchStats }: Props) {
           </p>
         </div>
       </div>
+
+      {showWhatsApp && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-semibold">WhatsApp Web</h3>
+              <button
+                onClick={() => setShowWhatsApp(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                Bezárás
+              </button>
+            </div>
+            <div className="h-[600px]">
+              <iframe
+                src="https://web.whatsapp.com"
+                className="w-full h-full"
+                allow="camera;microphone"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
