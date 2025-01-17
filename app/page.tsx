@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import WhatsAppLogin from '@/components/WhatsAppLogin'
-import AccountTable from '@/components/AccountTable'
 
 export default function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -13,8 +12,6 @@ export default function Home() {
       <div className="mb-8">
         <WhatsAppLogin onSuccess={() => setRefreshTrigger(prev => prev + 1)} />
       </div>
-
-      <AccountTable refreshTrigger={refreshTrigger} />
     </main>
   )
 } 

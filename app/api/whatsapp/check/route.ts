@@ -58,21 +58,6 @@ export async function GET() {
       }
     })
 
-    // Adatok mentése az adatbázisba
-    const response = await fetch('/api/accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        platform: 'whatsapp',
-        username: 'user', // TODO: Felhasználónév kinyerése
-        ...stats
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error('Hiba az adatok mentése során')
-    }
-
     return NextResponse.json({ isLoggedIn: true, stats })
   } catch (error) {
     console.error('WhatsApp ellenőrzési hiba:', error)
