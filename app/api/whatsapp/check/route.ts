@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer-core'
 import chromium from '@sparticuz/chromium'
 
 export const runtime = 'nodejs'
-export const maxDuration = 300 // 5 perc timeout
+export const maxDuration = 60 // Maximum 60 másodperc a Vercel Hobby terven
 
 export async function GET() {
   let browser = null
