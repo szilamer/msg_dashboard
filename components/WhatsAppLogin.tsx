@@ -1,112 +1,48 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import WhatsAppStats from './WhatsAppStats'
 
 interface WhatsAppStats {
-  totalMessages: number;
-  unreadMessages: number;
-  oldestUnreadMessage: string;
+  totalMessages: number
+  unreadMessages: number
+  oldestUnreadMessage: string
 }
 
-export default function WhatsAppLogin({ onSuccess }: { onSuccess: () => void }) {
+export default function WhatsAppLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [stats, setStats] = useState<WhatsAppStats | null>(null)
-  const [checkCount, setCheckCount] = useState(0)
-  const [refreshing, setRefreshing] = useState(false)
-  const checkCountRef = useRef(0)
 
-  const handleRefresh = async () => {
+  const checkWhatsAppStatus = async () => {
     try {
-      setRefreshing(true)
+      setLoading(true)
       setError('')
-
-      console.log('Adatok frissítése...')
+      
+      console.log('Adatok lekérése...')
       const response = await fetch('/api/whatsapp/check')
       const data = await response.json()
       console.log('Szerver válasz:', data)
 
       if (data.isLoggedIn && data.stats) {
-        console.log('Sikeres frissítés!', data.stats)
+        console.log('Sikeres adatlekérés:', data.stats)
         setStats(data.stats)
-        onSuccess()
       } else {
-        setError('Nem sikerült frissíteni az adatokat. Kérlek jelentkezz be újra.')
+        console.log('Nincs bejelentkezve vagy hiba történt')
+        setError('Nem sikerült lekérni az adatokat. Kérlek jelentkezz be újra.')
+        setStats(null)
       }
     } catch (err) {
-      console.error('Hiba a frissítés során:', err)
-      setError('Hiba történt a frissítés során')
-    } finally {
-      setRefreshing(false)
-    }
-  }
-
-  const handleLogin = async () => {
-    try {
-      setLoading(true)
-      setError('')
+      console.error('Hiba:', err)
+      setError('Hiba történt az adatok lekérése során')
       setStats(null)
-      setCheckCount(0)
-      checkCountRef.current = 0
-
-      console.log('WhatsApp bejelentkezés indítása...')
-      const whatsappWindow = window.open('https://web.whatsapp.com', 'WhatsApp Web', 'width=800,height=600')
-      
-      if (!whatsappWindow) {
-        throw new Error('Nem sikerült megnyitni a WhatsApp Web-et. Kérlek engedélyezd a felugró ablakokat.')
-      }
-
-      // Figyelünk a bejelentkezésre
-      const checkLogin = setInterval(async () => {
-        try {
-          if (whatsappWindow.closed) {
-            console.log('WhatsApp ablak bezárva')
-            clearInterval(checkLogin)
-            setLoading(false)
-            return
-          }
-
-          checkCountRef.current += 1
-          setCheckCount(checkCountRef.current)
-          console.log(`Bejelentkezés ellenőrzése (${checkCountRef.current}. próba)...`)
-
-          // Ellenőrizzük, hogy be van-e jelentkezve
-          const response = await fetch('/api/whatsapp/check')
-          const data = await response.json()
-          console.log('Szerver válasz:', data)
-
-          if (data.isLoggedIn && data.stats) {
-            console.log('Sikeres bejelentkezés!', data.stats)
-            clearInterval(checkLogin)
-            whatsappWindow.close()
-            setStats(data.stats)
-            onSuccess()
-            setLoading(false)
-          } else if (checkCountRef.current >= 30) { // 30 próba után feladjuk
-            console.log('Időtúllépés: nem sikerült bejelentkezni')
-            clearInterval(checkLogin)
-            whatsappWindow.close()
-            setError('Időtúllépés: nem sikerült bejelentkezni. Kérlek próbáld újra.')
-            setLoading(false)
-          }
-        } catch (err) {
-          console.error('Hiba a bejelentkezés ellenőrzésekor:', err)
-        }
-      }, 1000) // Gyakrabban ellenőrizzük (1 másodpercenként)
-
-    } catch (err) {
-      console.error('Hiba a bejelentkezés során:', err)
-      setError(err instanceof Error ? err.message : 'Ismeretlen hiba történt')
+    } finally {
       setLoading(false)
     }
   }
 
-  // Statisztikák megjelenítése a konzolban
-  useEffect(() => {
-    if (stats) {
-      console.log('Megjelenített statisztikák:', stats)
-    }
-  }, [stats])
+  const handleLogin = () => {
+    window.open('https://web.whatsapp.com', 'WhatsApp Web', 'width=800,height=600')
+  }
 
   return (
     <div className="space-y-6">
@@ -122,46 +58,35 @@ export default function WhatsAppLogin({ onSuccess }: { onSuccess: () => void }) 
         <div className="space-y-2">
           <button
             onClick={handleLogin}
-            disabled={loading || refreshing}
+            disabled={loading}
             className={`
               w-full py-2 px-4 rounded
-              ${loading || refreshing
-                ? 'bg-gray-300 cursor-not-allowed' 
-                : 'bg-green-500 hover:bg-green-600 text-white'}
+              ${loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'}
             `}
           >
-            {loading ? `Bejelentkezés folyamatban (${checkCount}. próba)...` : 'Bejelentkezés WhatsApp-ba'}
+            Bejelentkezés WhatsApp-ba
           </button>
 
-          {stats && (
-            <button
-              onClick={handleRefresh}
-              disabled={loading || refreshing}
-              className={`
-                w-full py-2 px-4 rounded
-                ${refreshing
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'}
-              `}
-            >
-              {refreshing ? 'Frissítés folyamatban...' : 'Adatok frissítése'}
-            </button>
-          )}
+          <button
+            onClick={checkWhatsAppStatus}
+            disabled={loading}
+            className={`
+              w-full py-2 px-4 rounded
+              ${loading ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}
+            `}
+          >
+            {loading ? 'Adatok lekérése...' : 'Adatok frissítése'}
+          </button>
         </div>
 
         <p className="mt-2 text-sm text-gray-600">
-          A bejelentkezéshez szkenneld be a QR kódot a WhatsApp alkalmazással.
+          1. Kattints a "Bejelentkezés WhatsApp-ba" gombra<br />
+          2. Olvasd be a QR kódot a telefonoddal<br />
+          3. Kattints az "Adatok frissítése" gombra
         </p>
       </div>
 
-      {stats && (
-        <>
-          <div className="text-sm text-gray-600 mb-2">
-            Statisztikák sikeresen letöltve!
-          </div>
-          <WhatsAppStats stats={stats} />
-        </>
-      )}
+      {stats && <WhatsAppStats stats={stats} />}
     </div>
   )
 } 
