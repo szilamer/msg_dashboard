@@ -33,7 +33,11 @@ export default function WhatsAppLogin({ onFetchStats }: Props) {
       throw new Error('A WhatsApp ablak nincs megnyitva vagy be van zárva')
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise<{
+      totalMessages: number;
+      unreadMessages: number;
+      oldestUnreadMessage: string;
+    }>((resolve, reject) => {
       try {
         const script = `
           const totalChats = document.querySelectorAll('div[data-testid="chat-list"] > div').length;
@@ -50,13 +54,14 @@ export default function WhatsAppLogin({ onFetchStats }: Props) {
             oldestUnread = timeElement?.textContent || '';
           }
 
-          return {
+          ({
             totalMessages: totalChats,
             unreadMessages: unreadCount,
             oldestUnreadMessage: oldestUnread
-          };
+          });
         `
 
+        // @ts-ignore
         const data = whatsappWindow.eval(script)
         resolve(data)
       } catch (error) {
