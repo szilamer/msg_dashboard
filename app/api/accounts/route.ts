@@ -1,16 +1,10 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client/edge'
-import { withAccelerate } from '@prisma/extension-accelerate'
+import { PrismaClient } from '@prisma/client'
 
-declare global {
-  var prisma: PrismaClient | undefined
-}
+const prisma = new PrismaClient().$extends({})
 
-const prisma = globalThis.prisma || new PrismaClient().$extends(withAccelerate())
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prisma = prisma
-}
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
