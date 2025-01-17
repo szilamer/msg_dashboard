@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import WhatsAppLogin from '@/components/WhatsAppLogin'
 import WhatsAppStats from '@/components/WhatsAppStats'
 
@@ -10,24 +10,32 @@ export default function Home() {
     oldestUnreadMessage: ''
   });
 
-  const handleFetchStats = async () => {
+  const fetchStats = async () => {
     try {
-      const response = await fetch('/api/whatsapp/check');
+      const response = await fetch('/api/accounts?platform=whatsapp');
       const data = await response.json();
-      if (data.stats) {
-        setWhatsAppStats(data.stats);
+      if (data.account) {
+        setWhatsAppStats({
+          totalMessages: data.account.totalMessages,
+          unreadMessages: data.account.unreadMessages,
+          oldestUnreadMessage: data.account.oldestUnreadMessage
+        });
       }
     } catch (error) {
       console.error('Hiba történt az adatok lekérése közben:', error);
     }
   };
 
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
   return (
     <main className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Chat Fiók Összesítő</h1>
       
       <div className="mb-8">
-        <WhatsAppLogin onFetchStats={handleFetchStats} />
+        <WhatsAppLogin onFetchStats={fetchStats} />
       </div>
 
       <div className="mb-8">
