@@ -28,49 +28,62 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // Adatok mentése az adatbázisba
-      await prisma.account.upsert({
+      // Először ellenőrizzük, hogy létezik-e már a fiók
+      const existingAccount = await prisma.account.findFirst({
         where: {
-          platform_username: {
-            platform,
-            username: mockData.username
-          }
-        },
-        update: {
-          totalMessages: mockData.totalMessages,
-          unreadMessages: mockData.unreadMessages,
-          oldestUnreadMessage: mockData.oldestUnreadMessage,
-          lastUpdated: new Date()
-        },
-        create: {
-          platform,
-          username: mockData.username,
-          totalMessages: mockData.totalMessages,
-          unreadMessages: mockData.unreadMessages,
-          oldestUnreadMessage: mockData.oldestUnreadMessage,
-          lastUpdated: new Date()
+          platform: platform,
+          username: mockData.username
         }
       })
+
+      let account;
+      if (existingAccount) {
+        // Ha létezik, frissítjük
+        account = await prisma.account.update({
+          where: {
+            id: existingAccount.id
+          },
+          data: {
+            totalMessages: mockData.totalMessages,
+            unreadMessages: mockData.unreadMessages,
+            oldestUnreadMessage: mockData.oldestUnreadMessage,
+            lastUpdated: new Date()
+          }
+        })
+      } else {
+        // Ha nem létezik, létrehozzuk
+        account = await prisma.account.create({
+          data: {
+            platform: platform,
+            username: mockData.username,
+            totalMessages: mockData.totalMessages,
+            unreadMessages: mockData.unreadMessages,
+            oldestUnreadMessage: mockData.oldestUnreadMessage,
+            lastUpdated: new Date()
+          }
+        })
+      }
 
       return NextResponse.json({ 
         success: true,
         message: 'Sikeres bejelentkezés',
         data: {
-          platform,
-          username: mockData.username
+          id: account.id,
+          platform: account.platform,
+          username: account.username
         }
       })
     } catch (dbError) {
       console.error('Adatbázis hiba:', dbError)
       return NextResponse.json(
-        { error: 'Adatbázis hiba történt' },
+        { error: 'Adatbázis hiba történt: ' + (dbError as Error).message },
         { status: 500 }
       )
     }
   } catch (error) {
     console.error('Hiba a bejelentkezés során:', error)
     return NextResponse.json(
-      { error: 'Hiba történt a bejelentkezés során' },
+      { error: 'Hiba történt a bejelentkezés során: ' + (error as Error).message },
       { status: 500 }
     )
   }
