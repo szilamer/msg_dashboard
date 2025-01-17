@@ -1,32 +1,31 @@
 import { NextResponse } from 'next/server'
 import puppeteer from 'puppeteer-core'
+import chromium from '@sparticuz/chromium'
 
 export const runtime = 'nodejs'
+export const maxDuration = 300 // 5 perc timeout
 
 export async function GET() {
   let browser = null
 
   try {
     browser = await puppeteer.launch({
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu'
-      ],
-      executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
       headless: true,
+      ignoreHTTPSErrors: true,
     })
 
     const page = await browser.newPage()
+    
+    // User Agent beállítása
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36')
+    
     await page.goto('https://web.whatsapp.com')
 
     // Várunk a chat lista megjelenésére
-    await page.waitForSelector('div[data-testid="chat-list"]', { timeout: 10000 })
+    await page.waitForSelector('div[data-testid="chat-list"]', { timeout: 30000 })
 
     // Adatok kinyerése
     const stats = await page.evaluate(() => {
@@ -52,8 +51,9 @@ export async function GET() {
     })
 
     return NextResponse.json({ stats })
-  } catch (error) {
-    return NextResponse.json({ error: 'Nem sikerült lekérni az adatokat' })
+  } catch (error: any) {
+    console.error('Hiba történt:', error)
+    return NextResponse.json({ error: 'Nem sikerült lekérni az adatokat', details: error.message })
   } finally {
     if (browser) {
       await browser.close()
