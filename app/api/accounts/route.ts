@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 
+interface Account {
+  id: number
+  platform: string
+  username: string
+  totalMessages: number
+  unreadMessages: number
+  oldestUnreadMessage: string
+  lastUpdated: Date
+}
+
 // Singleton PrismaClient instance
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 export const prisma = globalForPrisma.prisma || new PrismaClient({
@@ -20,7 +30,7 @@ export async function GET() {
     })
 
     console.log(`GET /api/accounts - ${accounts.length} fiók található`)
-    return NextResponse.json(accounts.map(account => ({
+    return NextResponse.json(accounts.map((account: Account) => ({
       ...account,
       id: account.id.toString()
     })))
@@ -55,7 +65,7 @@ export async function POST(request: Request) {
 
     console.log('POST /api/accounts - Létező fiók:', existingAccount)
 
-    let account;
+    let account: Account;
     try {
       if (existingAccount) {
         // Ha létezik, frissítjük
