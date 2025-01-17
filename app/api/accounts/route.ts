@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client/edge'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
     const accounts = await prisma.account.findMany()
     if (!accounts) return NextResponse.json([])
-    return NextResponse.json(accounts)
+    
+    // Explicit módon átalakítjuk az adatot, hogy biztosan tömb legyen
+    const accountsArray = Array.isArray(accounts) ? accounts : [accounts]
+    return NextResponse.json(accountsArray)
   } catch (error) {
     console.error('Error fetching accounts:', error)
     return NextResponse.json(
