@@ -7,7 +7,7 @@ export async function GET() {
   let browser = null
 
   try {
-    // Puppeteer indítása
+    console.log('Puppeteer indítása...')
     browser = await puppeteer.launch({
       args: [
         '--no-sandbox',
@@ -24,17 +24,33 @@ export async function GET() {
     })
 
     const page = await browser.newPage()
+    console.log('Új oldal megnyitva')
     
     // WhatsApp Web megnyitása
+    console.log('WhatsApp Web betöltése...')
     await page.goto('https://web.whatsapp.com', { waitUntil: 'networkidle0' })
+    console.log('WhatsApp Web betöltve')
 
     // Várunk a bejelentkezésre (QR kód szkennelése)
-    await page.waitForSelector('div[data-testid="chat-list"]', { timeout: 1000 })
+    console.log('Várakozás a chat lista megjelenésére...')
+    try {
+      await page.waitForSelector('div[data-testid="chat-list"]', { timeout: 10000 }) // 10 másodperc
+      console.log('Chat lista megtalálva!')
+
+      // Extra várakozás, hogy biztosan betöltődjenek az adatok
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      console.log('Extra várakozás után folytatás...')
+    } catch (error) {
+      console.log('Chat lista nem található, valószínűleg még nincs bejelentkezve')
+      return NextResponse.json({ isLoggedIn: false })
+    }
 
     // Adatok kinyerése
+    console.log('Adatok kinyerése...')
     const stats = await page.evaluate(() => {
       // Összes chat megszámolása
       const totalChats = document.querySelectorAll('div[data-testid="chat-list"] > div').length
+      console.log('Összes chat:', totalChats)
 
       // Olvasatlan üzenetek számolása
       const unreadChats = document.querySelectorAll('div[data-testid="chat-list"] span[data-testid*="unread"]')
@@ -42,6 +58,7 @@ export async function GET() {
         const count = parseInt(span.textContent || '0', 10)
         return sum + (isNaN(count) ? 1 : count)
       }, 0)
+      console.log('Olvasatlan üzenetek:', unreadCount)
 
       // Legrégebbi olvasatlan üzenet dátuma
       let oldestUnread = ''
@@ -50,6 +67,7 @@ export async function GET() {
         const timeElement = firstUnreadChat?.querySelector('span[data-testid*="last-msg-time"]')
         oldestUnread = timeElement?.textContent || ''
       }
+      console.log('Legrégebbi olvasatlan:', oldestUnread)
 
       return {
         totalMessages: totalChats,
@@ -58,6 +76,7 @@ export async function GET() {
       }
     })
 
+    console.log('Kinyert adatok:', stats)
     return NextResponse.json({ isLoggedIn: true, stats })
   } catch (error) {
     console.error('WhatsApp ellenőrzési hiba:', error)
@@ -68,6 +87,7 @@ export async function GET() {
   } finally {
     if (browser) {
       await browser.close()
+      console.log('Browser bezárva')
     }
   }
 } 
