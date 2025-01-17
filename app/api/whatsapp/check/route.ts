@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
-import puppeteer from 'puppeteer-core'
+import puppeteer from 'puppeteer'
 
 export async function POST(request: Request) {
   let browser = null
 
   try {
-    // Puppeteer indítása lokális Chrome-mal
+    // Puppeteer indítása
     browser = await puppeteer.launch({
       headless: false, // Látható böngésző ablak
-      executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', // Windows Chrome útvonal
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: null
     })
@@ -18,10 +17,20 @@ export async function POST(request: Request) {
     // User Agent beállítása
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36')
     
-    await page.goto('https://web.whatsapp.com')
+    // Navigálás a WhatsApp Web-re
+    await page.goto('https://web.whatsapp.com', {
+      waitUntil: 'networkidle0',
+      timeout: 60000
+    })
 
     // Várunk a chat lista megjelenésére
-    await page.waitForSelector('div[data-testid="chat-list"]', { timeout: 60000 }) // Hosszabb timeout
+    await page.waitForSelector('div[data-testid="chat-list"]', { 
+      visible: true,
+      timeout: 60000 
+    })
+
+    // Kis szünet, hogy minden betöltődjön
+    await page.waitForTimeout(2000)
 
     // Adatok kinyerése
     const stats = await page.evaluate(() => {
@@ -46,6 +55,7 @@ export async function POST(request: Request) {
       }
     })
 
+    console.log('Kinyert adatok:', stats)
     return NextResponse.json({ success: true, stats })
   } catch (error: any) {
     console.error('Hiba történt:', error)
