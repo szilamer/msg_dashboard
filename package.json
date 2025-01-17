@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "next": "^15.1.4"
+  },
+  "devDependencies": {
+    "@types/puppeteer-core": "^7.0.4"
+  }
+}
