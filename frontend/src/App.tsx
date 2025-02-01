@@ -49,6 +49,10 @@ ChartJS.register(
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+// Axios alapértelmezett beállítások
+axios.defaults.withCredentials = true;
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+
 interface AccountStats {
   account_id: number;
   account_name: string;
