@@ -36,9 +36,15 @@ from services import update_account_stats
 app = FastAPI()
 
 # CORS beállítások
+origins = [
+    "https://msg-dashboard-2ku2.onrender.com",  # Frontend URL
+    "http://localhost:3000",  # Lokális fejlesztéshez
+    "http://localhost:5000"   # Lokális fejlesztéshez
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Frissítjük, hogy minden origin-t engedélyezzen
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
