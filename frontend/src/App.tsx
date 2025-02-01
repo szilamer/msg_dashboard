@@ -49,9 +49,13 @@ ChartJS.register(
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-// Axios alapértelmezett beállítások
-axios.defaults.withCredentials = true;
-axios.defaults.headers.common['Content-Type'] = 'application/json';
+// Axios instance létrehozása egyedi konfigurációval
+const api = axios.create({
+    baseURL: API_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    }
+});
 
 interface AccountStats {
   account_id: number;
@@ -246,7 +250,7 @@ function App() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const response = await axios.get<AccountStats[]>(`${API_URL}/stats`);
+      const response = await api.get<AccountStats[]>('/stats');
       
       // Csak a legfrissebb adatok megtartása fiókonként
       const latestStats = Object.values(
@@ -296,7 +300,7 @@ function App() {
 
   const handleDeleteAccount = useCallback(async (accountId: number) => {
     try {
-      await axios.delete(`${API_URL}/accounts/${accountId}`);
+      await api.delete(`/accounts/${accountId}`);
       setStats(prevStats => prevStats.filter(stat => stat.account_id !== accountId));
       await fetchStats();
     } catch (error) {
@@ -315,7 +319,7 @@ function App() {
     try {
       setLoading(true);
       console.log("Starting refresh...");
-      const response = await axios.post(`${API_URL}/stats/refresh`);
+      const response = await api.post('/stats/refresh');
       console.log("Refresh response:", response.data);
       await fetchStats();
       console.log("Stats fetched after refresh");
@@ -340,7 +344,7 @@ function App() {
 
       console.log('Sending data:', formData);
       
-      const response = await axios.post(`${API_URL}/accounts`, formData);
+      const response = await api.post('/accounts', formData);
       console.log('Backend response:', response.data);
       
       setOpenDialog(false);
@@ -351,7 +355,7 @@ function App() {
       });
 
       console.log("Starting immediate refresh after account creation...");
-      await axios.post(`${API_URL}/stats/refresh`);
+      await api.post('/stats/refresh');
       await fetchStats();
       
     } catch (error: any) {

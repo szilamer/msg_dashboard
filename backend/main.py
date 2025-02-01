@@ -40,13 +40,30 @@ app = FastAPI()
 # CORS beállítások
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Minden origin engedélyezése
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    allow_origins=["https://msg-dashboard-2ku2.onrender.com"],
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600
 )
+
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):
+    response = await call_next(request)
+    
+    # CORS headers minden válaszhoz
+    response.headers["Access-Control-Allow-Origin"] = "https://msg-dashboard-2ku2.onrender.com"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    
+    # OPTIONS kérések kezelése
+    if request.method == "OPTIONS":
+        return JSONResponse(
+            content={},
+            headers=response.headers,
+            status_code=200
+        )
+    
+    return response
 
 @app.get("/")
 @app.head("/")
