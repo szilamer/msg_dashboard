@@ -38,6 +38,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "API is running"}
+
 # Adatbázis inicializálás
 def init_db():
     db_path = os.path.join(os.path.dirname(__file__), 'messages.db')
