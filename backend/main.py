@@ -1,10 +1,28 @@
+import os
+import logging
+import sys
+
+# Logging beállítása
+log_file = os.path.join(os.path.dirname(__file__), 'debug.log')
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(log_file, mode='a', encoding='utf-8')
+    ]
+)
+
+# Logger létrehozása
+logger = logging.getLogger('msg_api')
+logger.setLevel(logging.DEBUG)
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
 from typing import List, Optional
 from datetime import datetime
 import sqlite3
-import os
 import json
 from services import update_account_stats
 
@@ -21,7 +39,8 @@ app.add_middleware(
 
 # Adatbázis inicializálás
 def init_db():
-    conn = sqlite3.connect('messages.db')
+    db_path = os.path.join(os.path.dirname(__file__), 'messages.db')
+    conn = sqlite3.connect(db_path)
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS accounts (
@@ -46,6 +65,10 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+    return db_path
+
+# Globális változó az adatbázis elérési útjához
+DB_PATH = init_db()
 
 # Modellek
 class AccountBase(BaseModel):
@@ -73,7 +96,7 @@ async def startup_event():
 
 @app.post("/accounts", response_model=Account)
 async def create_account(account: AccountBase):
-    conn = sqlite3.connect('messages.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     now = datetime.now().isoformat()
     
@@ -122,7 +145,7 @@ async def create_account(account: AccountBase):
 
 @app.get("/accounts", response_model=List[Account])
 async def get_accounts():
-    conn = sqlite3.connect('messages.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT id, account_type, account_name, credentials, is_active, created_at FROM accounts WHERE is_active = TRUE")
     rows = c.fetchall()
@@ -141,20 +164,36 @@ async def get_accounts():
 
 @app.delete("/accounts/{account_id}")
 async def delete_account(account_id: int):
-    conn = sqlite3.connect('messages.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     try:
+        # Ellenőrizzük, hogy létezik-e a fiók
+        c.execute("SELECT id FROM accounts WHERE id = ?", (account_id,))
+        if not c.fetchone():
+            raise HTTPException(status_code=404, detail="A fiók nem található")
+            
+        # Töröljük a statisztikákat
+        c.execute("DELETE FROM account_stats WHERE account_id = ?", (account_id,))
+        
+        # Inaktiváljuk a fiókot
         c.execute("UPDATE accounts SET is_active = FALSE WHERE id = ?", (account_id,))
+        
         conn.commit()
-        return {"message": "Account successfully deleted"}
+        return {"message": "A fiók sikeresen törölve"}
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Adatbázis hiba: {str(e)}")
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Váratlan hiba történt: {str(e)}")
     finally:
         conn.close()
 
 @app.get("/stats", response_model=List[AccountStats])
 async def get_stats():
-    conn = sqlite3.connect('messages.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
         SELECT 
@@ -186,15 +225,33 @@ async def get_stats():
 
 @app.post("/stats/refresh")
 async def refresh_stats():
-    print("Starting stats refresh...")
+    logger.info("=== Starting stats refresh ===")
     try:
+        # Ellenőrizzük az aktív fiókokat
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT id, account_type, account_name, credentials FROM accounts WHERE is_active = TRUE")
+        accounts = c.fetchall()
+        logger.info(f"Found {len(accounts)} active accounts")
+        
+        for account in accounts:
+            logger.info(f"Account details:")
+            logger.info(f"ID: {account[0]}")
+            logger.info(f"Type: {account[1]}")
+            logger.info(f"Name: {account[2]}")
+            logger.debug(f"Credentials: {account[3]}")
+        
+        conn.close()
+        
+        logger.info("Starting update_account_stats...")
         await update_account_stats()
-        print("Stats refresh completed successfully")
+        logger.info("Stats refresh completed successfully")
         return {"message": "Stats refresh completed"}
     except Exception as e:
-        print(f"Error during stats refresh: {str(e)}")
+        logger.error(f"Error during stats refresh: {str(e)}")
+        logger.error(f"Error type: {type(e)}")
         import traceback
-        print(f"Traceback: {traceback.format_exc()}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

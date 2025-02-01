@@ -25,6 +25,27 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import MessageIcon from '@mui/icons-material/Message';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import axios from 'axios';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface AccountStats {
   account_id: number;
@@ -34,6 +55,14 @@ interface AccountStats {
   unread_messages: number;
   last_unread_date: string;
   last_updated: string;
+  id?: string;
+}
+
+interface TimeSeriesData {
+  timestamp: string;
+  total_messages: number;
+  unread_messages: number;
+  new_messages: number;
 }
 
 interface AccountFormData {
@@ -57,19 +86,44 @@ const ACCOUNT_TYPES = {
   },
   'HelpScout': {
     name: 'HelpScout',
-    fields: ['api_key']
+    fields: ['client_id', 'client_secret']
   }
 };
 
 const columns: GridColDef[] = [
-  { field: 'account_name', headerName: 'Account Name', width: 150 },
-  { field: 'account_type', headerName: 'Account Type', width: 130 },
-  { field: 'total_messages', headerName: 'Total Messages', width: 130, type: 'number' },
-  { field: 'unread_messages', headerName: 'Unread Messages', width: 160, type: 'number' },
+  { 
+    field: 'account_name', 
+    headerName: 'Account Name', 
+    width: 150,
+    flex: 1 
+  },
+  { 
+    field: 'account_type', 
+    headerName: 'Account Type', 
+    width: 130,
+    flex: 1 
+  },
+  { 
+    field: 'total_messages', 
+    headerName: 'Total Messages', 
+    width: 130, 
+    type: 'number',
+    flex: 1,
+    valueFormatter: (params) => params.value.toLocaleString('en-US')
+  },
+  { 
+    field: 'unread_messages', 
+    headerName: 'Unread Messages', 
+    width: 160, 
+    type: 'number',
+    flex: 1,
+    valueFormatter: (params) => params.value.toLocaleString('en-US')
+  },
   { 
     field: 'last_unread_date', 
-    headerName: 'Oldest Unread Message', 
+    headerName: 'Oldest Unread', 
     width: 200,
+    flex: 1,
     valueFormatter: (params) => {
       if (!params.value) return '-';
       return new Date(params.value).toLocaleString('en-US');
@@ -79,6 +133,7 @@ const columns: GridColDef[] = [
     field: 'last_updated', 
     headerName: 'Last Updated', 
     width: 200,
+    flex: 1,
     valueFormatter: (params) => {
       return new Date(params.value).toLocaleString('en-US');
     }
@@ -87,10 +142,12 @@ const columns: GridColDef[] = [
     field: 'actions',
     headerName: 'Actions',
     width: 100,
+    flex: 0.5,
     renderCell: (params) => (
       <IconButton
         onClick={() => params.row.onDelete(params.row.account_id)}
         color="error"
+        size="small"
       >
         <DeleteIcon />
       </IconButton>
@@ -98,13 +155,11 @@ const columns: GridColDef[] = [
   },
 ];
 
-// Új komponens az összesítéshez
 const StatsSummary = ({ stats }: { stats: AccountStats[] }) => {
   const totalMessages = stats.reduce((sum, stat) => sum + stat.total_messages, 0);
   const totalUnread = stats.reduce((sum, stat) => sum + stat.unread_messages, 0);
   const accountCount = stats.length;
 
-  // Legrégebbi olvasatlan üzenet meghatározása
   const oldestUnreadDate = stats.reduce((oldest, stat) => {
     if (!stat.last_unread_date) return oldest;
     if (!oldest) return stat.last_unread_date;
@@ -112,59 +167,68 @@ const StatsSummary = ({ stats }: { stats: AccountStats[] }) => {
   }, null as string | null);
 
   return (
-    <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f5f5f5' }}>
-      <Grid container spacing={3} alignItems="center">
-        <Grid item xs={12} md={3}>
-          <Box display="flex" alignItems="center">
-            <MessageIcon sx={{ mr: 1, color: 'primary.main' }} />
-            <Typography variant="body1">
-              Total Messages: <strong>{totalMessages.toLocaleString('en-US')}</strong>
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Box display="flex" alignItems="center">
-            <MarkEmailUnreadIcon sx={{ mr: 1, color: 'warning.main' }} />
-            <Typography variant="body1">
-              Unread: <strong>{totalUnread.toLocaleString('en-US')}</strong>
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Box display="flex" alignItems="center">
-            <Typography variant="body1">
-              Oldest Unread: <strong>
-                {oldestUnreadDate ? new Date(oldestUnreadDate).toLocaleString('en-US') : '-'}
-              </strong>
-            </Typography>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography variant="body1">
-              Active Accounts:
-            </Typography>
-            {Object.entries(stats.reduce((acc, stat) => {
-              acc[stat.account_type] = (acc[stat.account_type] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)).map(([type, count]) => (
-              <Chip 
-                key={type}
-                label={`${type}: ${count}`}
-                size="small"
-                color="primary"
-                variant="outlined"
-              />
-            ))}
-          </Box>
-        </Grid>
-      </Grid>
-    </Paper>
+    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+      <Paper sx={{ p: 2, flex: 1, minWidth: '200px', backgroundColor: '#f8f9fa' }}>
+        <Box display="flex" alignItems="center" justifyContent="center">
+          <MessageIcon sx={{ mr: 1, color: 'primary.main' }} />
+          <Typography variant="h6">
+            {totalMessages.toLocaleString('en-US')}
+          </Typography>
+        </Box>
+        <Typography variant="body2" textAlign="center" color="text.secondary">
+          Total Messages
+        </Typography>
+      </Paper>
+
+      <Paper sx={{ p: 2, flex: 1, minWidth: '200px', backgroundColor: '#f8f9fa' }}>
+        <Box display="flex" alignItems="center" justifyContent="center">
+          <MarkEmailUnreadIcon sx={{ mr: 1, color: 'warning.main' }} />
+          <Typography variant="h6">
+            {totalUnread.toLocaleString('en-US')}
+          </Typography>
+        </Box>
+        <Typography variant="body2" textAlign="center" color="text.secondary">
+          Unread Messages
+        </Typography>
+      </Paper>
+
+      <Paper sx={{ p: 2, flex: 1, minWidth: '200px', backgroundColor: '#f8f9fa' }}>
+        <Box display="flex" alignItems="center" justifyContent="center">
+          <Typography variant="h6">
+            {oldestUnreadDate ? new Date(oldestUnreadDate).toLocaleString('en-US') : '-'}
+          </Typography>
+        </Box>
+        <Typography variant="body2" textAlign="center" color="text.secondary">
+          Oldest Unread
+        </Typography>
+      </Paper>
+
+      <Paper sx={{ p: 2, flex: 1, minWidth: '200px', backgroundColor: '#f8f9fa' }}>
+        <Box display="flex" alignItems="center" justifyContent="center" gap={1} flexWrap="wrap">
+          {Object.entries(stats.reduce((acc, stat) => {
+            acc[stat.account_type] = (acc[stat.account_type] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)).map(([type, count]) => (
+            <Chip 
+              key={type}
+              label={`${type}: ${count}`}
+              size="small"
+              color="primary"
+              variant="outlined"
+            />
+          ))}
+        </Box>
+        <Typography variant="body2" textAlign="center" color="text.secondary">
+          Active Accounts
+        </Typography>
+      </Paper>
+    </Box>
   );
 };
 
 function App() {
   const [stats, setStats] = useState<AccountStats[]>([]);
+  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesData[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [formData, setFormData] = useState<AccountFormData>({
@@ -177,12 +241,48 @@ function App() {
   const fetchStats = useCallback(async () => {
     try {
       const response = await axios.get<AccountStats[]>('http://localhost:8000/stats');
-      setStats(response.data.map(stat => ({
-        ...stat,
-        onDelete: (accountId: number) => handleDeleteAccount(accountId)
-      })));
+      
+      // Csak a legfrissebb adatok megtartása fiókonként
+      const latestStats = Object.values(
+        response.data.reduce((acc, stat) => {
+          const key = `${stat.account_type}_${stat.account_id}`;
+          if (!acc[key] || new Date(stat.last_updated) > new Date(acc[key].last_updated)) {
+            acc[key] = {
+              ...stat,
+              id: key,
+              onDelete: (accountId: number) => handleDeleteAccount(accountId)
+            };
+          }
+          return acc;
+        }, {} as Record<string, AccountStats & { onDelete: (accountId: number) => void }>)
+      );
+
+      setStats(latestStats);
+
+      // Idősorozat adatok frissítése
+      const currentTotal = latestStats.reduce((sum, stat) => sum + stat.total_messages, 0);
+      const currentUnread = latestStats.reduce((sum, stat) => sum + stat.unread_messages, 0);
+      
+      setTimeSeriesData(prevData => {
+        const newData = [...prevData];
+        const timestamp = new Date().toISOString();
+        const previousTotal = prevData.length > 0 ? prevData[prevData.length - 1].total_messages : 0;
+        
+        newData.push({
+          timestamp,
+          total_messages: currentTotal,
+          unread_messages: currentUnread,
+          new_messages: currentTotal - previousTotal
+        });
+
+        // Csak az utolsó 24 óra adatait tartjuk meg
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return newData.filter(data => new Date(data.timestamp) > twentyFourHoursAgo);
+      });
+
     } catch (error) {
-      setError('Error fetching data');
+      console.error('Error fetching stats:', error);
+      setError('Hiba történt az adatok lekérésekor');
     } finally {
       setLoading(false);
     }
@@ -191,9 +291,11 @@ function App() {
   const handleDeleteAccount = useCallback(async (accountId: number) => {
     try {
       await axios.delete(`http://localhost:8000/accounts/${accountId}`);
+      setStats(prevStats => prevStats.filter(stat => stat.account_id !== accountId));
       await fetchStats();
     } catch (error) {
-      setError('Error deleting account');
+      console.error('Error deleting account:', error);
+      setError('Hiba történt a fiók törlésekor');
     }
   }, [fetchStats]);
 
@@ -242,18 +344,59 @@ function App() {
         account_name: '',
         credentials: {}
       });
+
+      // Azonnal frissítjük a statisztikákat
+      console.log("Starting immediate refresh after account creation...");
+      await axios.post('http://localhost:8000/stats/refresh');
       await fetchStats();
+      
     } catch (error: any) {
       console.error('Error details:', error.response?.data || error);
       setError(error.response?.data?.detail || 'Error creating account');
     }
   };
 
+  const chartData = {
+    labels: timeSeriesData.map(data => new Date(data.timestamp).toLocaleTimeString()),
+    datasets: [
+      {
+        label: 'New Messages',
+        data: timeSeriesData.map(data => data.new_messages),
+        borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1,
+      },
+      {
+        label: 'Unread Messages',
+        data: timeSeriesData.map(data => data.unread_messages),
+        borderColor: 'rgb(255, 99, 132)',
+        tension: 0.1,
+      }
+    ]
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Message Trends'
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" component="h1">
-          Message Statistics
+          Message Statistics Dashboard
         </Typography>
         <Box>
           <Button
@@ -267,6 +410,7 @@ function App() {
           <IconButton 
             onClick={handleRefresh} 
             color="primary"
+            disabled={loading}
           >
             <RefreshIcon />
           </IconButton>
@@ -279,24 +423,59 @@ function App() {
         </Alert>
       )}
 
-      <StatsSummary stats={stats} />
+      <Box sx={{ mb: 4 }}>
+        <StatsSummary stats={stats} />
+      </Box>
 
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-        <DataGrid
-          rows={stats}
-          columns={columns}
-          getRowId={(row) => row.account_id}
-          initialState={{
-            pagination: {
-              paginationModel: { page: 0, pageSize: 10 },
-            },
-          }}
-          pageSizeOptions={[5, 10, 25]}
-          disableRowSelectionOnClick
-          autoHeight
-          loading={loading}
-        />
-      </Paper>
+      <Grid container spacing={3}>
+        {/* Chart */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Message Trends
+            </Typography>
+            <Box sx={{ height: 400 }}>
+              <Line data={chartData} options={chartOptions} />
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* Table */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Account Details
+            </Typography>
+            <DataGrid
+              rows={stats}
+              columns={columns}
+              getRowId={(row) => row.id}
+              initialState={{
+                pagination: {
+                  paginationModel: { page: 0, pageSize: 25 },
+                },
+                sorting: {
+                  sortModel: [{ field: 'account_name', sort: 'asc' }],
+                },
+              }}
+              pageSizeOptions={[10, 25, 50]}
+              disableRowSelectionOnClick
+              autoHeight
+              loading={loading}
+              sx={{ 
+                minHeight: 400,
+                '& .MuiDataGrid-cell': {
+                  fontSize: '0.95rem',
+                },
+                '& .MuiDataGrid-columnHeader': {
+                  backgroundColor: '#f5f5f5',
+                  fontWeight: 'bold',
+                }
+              }}
+            />
+          </Paper>
+        </Grid>
+      </Grid>
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>Add New Account</DialogTitle>
