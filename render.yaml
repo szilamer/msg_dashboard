@@ -4,8 +4,11 @@ services:
     name: msg-dashboard-api
     env: python
     plan: free
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: cd backend && gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120 --worker-class uvicorn.workers.UvicornWorker
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      chmod +x backend/run.sh
+    startCommand: ./backend/run.sh
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
