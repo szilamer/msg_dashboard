@@ -23,8 +23,10 @@ logging.basicConfig(
 logger = logging.getLogger('msg_api')
 logger.setLevel(logging.DEBUG)
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 from typing import List, Optional
 from datetime import datetime
@@ -35,23 +37,27 @@ from services import update_account_stats
 # Explicit export for Gunicorn
 app = FastAPI()
 
-# CORS beállítások
-origins = [
-    "https://msg-dashboard-2ku2.onrender.com",  # Frontend URL
-    "http://localhost:3000",  # Lokális fejlesztéshez
-    "http://localhost:5000"   # Lokális fejlesztéshez
-]
+class CORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        
+        # CORS headers hozzáadása minden válaszhoz
+        response.headers["Access-Control-Allow-Origin"] = "https://msg-dashboard-2ku2.onrender.com"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, HEAD"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        
+        # Ha OPTIONS kérés, akkor üres válasz a headerekkel
+        if request.method == "OPTIONS":
+            return JSONResponse(
+                content={},
+                headers=response.headers
+            )
+        
+        return response
 
-# CORS middleware hozzáadása részletes beállításokkal
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,
-)
+# Middleware hozzáadása
+app.add_middleware(CORSMiddleware)
 
 @app.get("/")
 @app.head("/")
