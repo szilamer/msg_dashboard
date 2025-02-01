@@ -2,8 +2,14 @@ import os
 import logging
 import sys
 
+# Adatbázis elérési út beállítása
+if os.environ.get('RENDER'):
+    DB_DIR = '/opt/render/project/src'
+else:
+    DB_DIR = os.path.dirname(__file__)
+
 # Logging beállítása
-log_file = os.path.join(os.path.dirname(__file__), 'debug.log')
+log_file = os.path.join(DB_DIR, 'debug.log')
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -44,32 +50,39 @@ async def root():
 
 # Adatbázis inicializálás
 def init_db():
-    db_path = os.path.join(os.path.dirname(__file__), 'messages.db')
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS accounts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_type TEXT NOT NULL,
-            account_name TEXT NOT NULL,
-            credentials TEXT NOT NULL,
-            is_active BOOLEAN DEFAULT TRUE,
-            created_at TEXT NOT NULL
-        )
-    ''')
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS account_stats (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_id INTEGER NOT NULL,
-            total_messages INTEGER,
-            unread_messages INTEGER,
-            last_unread_date TEXT,
-            last_updated TEXT,
-            FOREIGN KEY (account_id) REFERENCES accounts(id)
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    db_path = os.path.join(DB_DIR, 'messages.db')
+    logger.info(f"Initializing database at: {db_path}")
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS accounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_type TEXT NOT NULL,
+                account_name TEXT NOT NULL,
+                credentials TEXT NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TEXT NOT NULL
+            )
+        ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS account_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                total_messages INTEGER,
+                unread_messages INTEGER,
+                last_unread_date TEXT,
+                last_updated TEXT,
+                FOREIGN KEY (account_id) REFERENCES accounts(id)
+            )
+        ''')
+        conn.commit()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing database: {str(e)}")
+        raise
+    finally:
+        conn.close()
     return db_path
 
 # Globális változó az adatbázis elérési útjához
