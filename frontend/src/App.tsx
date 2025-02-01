@@ -47,6 +47,8 @@ ChartJS.register(
   Legend
 );
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
 interface AccountStats {
   account_id: number;
   account_name: string;
@@ -240,7 +242,7 @@ function App() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const response = await axios.get<AccountStats[]>('http://localhost:8000/stats');
+      const response = await axios.get<AccountStats[]>(`${API_URL}/stats`);
       
       // Csak a legfrissebb adatok megtartása fiókonként
       const latestStats = Object.values(
@@ -282,7 +284,7 @@ function App() {
 
     } catch (error) {
       console.error('Error fetching stats:', error);
-      setError('Hiba történt az adatok lekérésekor');
+      setError('Error fetching data');
     } finally {
       setLoading(false);
     }
@@ -290,12 +292,12 @@ function App() {
 
   const handleDeleteAccount = useCallback(async (accountId: number) => {
     try {
-      await axios.delete(`http://localhost:8000/accounts/${accountId}`);
+      await axios.delete(`${API_URL}/accounts/${accountId}`);
       setStats(prevStats => prevStats.filter(stat => stat.account_id !== accountId));
       await fetchStats();
     } catch (error) {
       console.error('Error deleting account:', error);
-      setError('Hiba történt a fiók törlésekor');
+      setError('Error deleting account');
     }
   }, [fetchStats]);
 
@@ -309,7 +311,7 @@ function App() {
     try {
       setLoading(true);
       console.log("Starting refresh...");
-      const response = await axios.post('http://localhost:8000/stats/refresh');
+      const response = await axios.post(`${API_URL}/stats/refresh`);
       console.log("Refresh response:", response.data);
       await fetchStats();
       console.log("Stats fetched after refresh");
@@ -324,7 +326,6 @@ function App() {
   const handleSubmit = async (event: React.MouseEvent) => {
     event.preventDefault();
     try {
-      // Ellenőrizzük, hogy minden kötelező credential ki van-e töltve
       const requiredFields = ACCOUNT_TYPES[formData.account_type as keyof typeof ACCOUNT_TYPES]?.fields || [];
       const missingFields = requiredFields.filter(field => !formData.credentials[field]);
       
@@ -335,7 +336,7 @@ function App() {
 
       console.log('Sending data:', formData);
       
-      const response = await axios.post('http://localhost:8000/accounts', formData);
+      const response = await axios.post(`${API_URL}/accounts`, formData);
       console.log('Backend response:', response.data);
       
       setOpenDialog(false);
@@ -345,9 +346,8 @@ function App() {
         credentials: {}
       });
 
-      // Azonnal frissítjük a statisztikákat
       console.log("Starting immediate refresh after account creation...");
-      await axios.post('http://localhost:8000/stats/refresh');
+      await axios.post(`${API_URL}/stats/refresh`);
       await fetchStats();
       
     } catch (error: any) {
