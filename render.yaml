@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: cd backend && PYTHONPATH=$PYTHONPATH:. gunicorn -k uvicorn.workers.UvicornWorker -w 4 --timeout 120 --bind 0.0.0.0:$PORT main:app
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 4
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
