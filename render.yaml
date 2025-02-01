@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 4
+    startCommand: cd backend && PYTHONPATH=/opt/render/project/src/backend python -m uvicorn main:app --host 0.0.0.0 --port $PORT --workers 4
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -16,7 +16,7 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: PYTHONPATH
-        value: /opt/render/project/src
+        value: /opt/render/project/src/backend
       - key: LOG_LEVEL
         value: "info"
 
