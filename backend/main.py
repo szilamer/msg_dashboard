@@ -223,35 +223,54 @@ async def delete_account(account_id: int):
 
 @app.get("/stats", response_model=List[AccountStats])
 async def get_stats():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("""
-        SELECT 
-            s.account_id,
-            a.account_name,
-            a.account_type,
-            s.total_messages,
-            s.unread_messages,
-            s.last_unread_date,
-            s.last_updated
-        FROM account_stats s
-        JOIN accounts a ON s.account_id = a.id
-        WHERE a.is_active = TRUE
-    """)
-    rows = c.fetchall()
-    conn.close()
-    
-    return [
-        AccountStats(
-            account_id=row[0],
-            account_name=row[1],
-            account_type=row[2],
-            total_messages=row[3],
-            unread_messages=row[4],
-            last_unread_date=row[5],
-            last_updated=row[6]
-        ) for row in rows
-    ]
+    logger.info("=== Starting /stats request ===")
+    try:
+        logger.info(f"Connecting to database at: {DB_PATH}")
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        logger.info("Executing stats query...")
+        c.execute("""
+            SELECT 
+                s.account_id,
+                a.account_name,
+                a.account_type,
+                s.total_messages,
+                s.unread_messages,
+                s.last_unread_date,
+                s.last_updated
+            FROM account_stats s
+            JOIN accounts a ON s.account_id = a.id
+            WHERE a.is_active = TRUE
+        """)
+        rows = c.fetchall()
+        logger.info(f"Found {len(rows)} rows")
+        
+        result = [
+            AccountStats(
+                account_id=row[0],
+                account_name=row[1],
+                account_type=row[2],
+                total_messages=row[3],
+                unread_messages=row[4],
+                last_unread_date=row[5],
+                last_updated=row[6]
+            ) for row in rows
+        ]
+        logger.info("Successfully processed stats data")
+        return result
+    except sqlite3.Error as e:
+        logger.error(f"Database error in /stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected error in /stats: {str(e)}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+            logger.info("Database connection closed")
 
 @app.post("/stats/refresh")
 async def refresh_stats():
