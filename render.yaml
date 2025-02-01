@@ -16,11 +16,13 @@ services:
       - key: HOST
         value: 0.0.0.0
 
-  # Frontend service as static site
-  - type: static
+  # Frontend service
+  - type: web
     name: msg-dashboard-frontend
+    env: node
+    plan: free
     buildCommand: cd frontend && npm install && npm run build
-    publishDir: frontend/build
+    startCommand: cd frontend && npm install -g serve && serve -s build -l $PORT
     envVars:
       - key: NODE_VERSION
         value: 14.17.0
