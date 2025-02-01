@@ -40,10 +40,12 @@ app = FastAPI()
 # CORS beállítások
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://msg-dashboard-2ku2.onrender.com"],
+    allow_origins=["*"],  # Minden origin engedélyezése
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600
 )
 
 @app.get("/")
