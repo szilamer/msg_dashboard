@@ -26,14 +26,15 @@ import sqlite3
 import json
 from services import update_account_stats
 
+# Explicit export for Gunicorn
 app = FastAPI()
 
 # CORS beállítások
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Csak a frontend origin
+    allow_origins=["*"],  # Frissítjük, hogy minden origin-t engedélyezzen
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
