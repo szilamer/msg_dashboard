@@ -5,7 +5,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: cd backend && python -m uvicorn asgi:application --host 0.0.0.0 --port $PORT --workers 4
+    startCommand: cd backend && gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120 --worker-class uvicorn.workers.UvicornWorker
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -19,6 +19,10 @@ services:
         value: /opt/render/project/src/backend
       - key: LOG_LEVEL
         value: "info"
+      - key: WORKERS_PER_CORE
+        value: "1"
+      - key: WEB_CONCURRENCY
+        value: "4"
 
   # Frontend service
   - type: web
