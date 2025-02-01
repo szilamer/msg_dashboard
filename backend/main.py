@@ -25,7 +25,7 @@ logger.setLevel(logging.DEBUG)
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 from typing import List, Optional
@@ -37,9 +37,12 @@ from services import update_account_stats
 # Explicit export for Gunicorn
 app = FastAPI()
 
-class CORSMiddleware(BaseHTTPMiddleware):
+class CustomCORSMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
+        if request.method == "OPTIONS":
+            response = JSONResponse(content={})
+        else:
+            response = await call_next(request)
         
         # CORS headers hozzáadása minden válaszhoz
         response.headers["Access-Control-Allow-Origin"] = "https://msg-dashboard-2ku2.onrender.com"
@@ -47,17 +50,10 @@ class CORSMiddleware(BaseHTTPMiddleware):
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, HEAD"
         response.headers["Access-Control-Allow-Headers"] = "*"
         
-        # Ha OPTIONS kérés, akkor üres válasz a headerekkel
-        if request.method == "OPTIONS":
-            return JSONResponse(
-                content={},
-                headers=response.headers
-            )
-        
         return response
 
 # Middleware hozzáadása
-app.add_middleware(CORSMiddleware)
+app.add_middleware(CustomCORSMiddleware)
 
 @app.get("/")
 @app.head("/")
