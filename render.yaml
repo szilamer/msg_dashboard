@@ -3,6 +3,7 @@ services:
   - type: web
     name: msg-dashboard-api
     env: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: cd backend && gunicorn main:app --bind 0.0.0.0:$PORT
     envVars:
@@ -15,24 +16,13 @@ services:
       - key: HOST
         value: 0.0.0.0
 
-  # Frontend service
-  - type: web
+  # Frontend service as static site
+  - type: static
     name: msg-dashboard-frontend
-    env: node
     buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npm install -g serve && serve -s build -l $PORT
+    publishDir: frontend/build
     envVars:
       - key: NODE_VERSION
         value: 14.17.0
       - key: REACT_APP_API_URL
-        value: https://msg-dashboard-api.onrender.com
-      - key: PORT
-        fromService:
-          name: msg-dashboard-api
-          type: web
-          property: port
-      - key: API_HOST
-        fromService:
-          name: msg-dashboard-api
-          type: web
-          property: host 
+        value: https://msg-dashboard-api.onrender.com 
