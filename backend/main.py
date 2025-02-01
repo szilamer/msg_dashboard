@@ -42,17 +42,28 @@ origins = [
     "http://localhost:5000"   # Lokális fejlesztéshez
 ]
 
+# CORS middleware hozzáadása részletes beállításokkal
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 @app.get("/")
+@app.head("/")
 async def root():
     return {"status": "ok", "message": "API is running"}
+
+@app.options("/stats")
+@app.options("/accounts")
+@app.options("/accounts/{account_id}")
+@app.options("/stats/refresh")
+async def options_handler():
+    return {"status": "ok"}
 
 # Adatbázis inicializálás
 def init_db():
