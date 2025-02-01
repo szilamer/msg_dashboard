@@ -25,7 +25,14 @@ services:
       - key: NODE_VERSION
         value: 14.17.0
       - key: REACT_APP_API_URL
+        value: https://msg-dashboard-api.onrender.com
+      - key: PORT
         fromService:
           name: msg-dashboard-api
           type: web
-          property: url 
+          property: port
+      - key: API_HOST
+        fromService:
+          name: msg-dashboard-api
+          type: web
+          property: host 
