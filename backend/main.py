@@ -37,23 +37,14 @@ from services import update_account_stats
 # Explicit export for Gunicorn
 app = FastAPI()
 
-class CustomCORSMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        if request.method == "OPTIONS":
-            response = JSONResponse(content={})
-        else:
-            response = await call_next(request)
-        
-        # CORS headers hozzáadása minden válaszhoz
-        response.headers["Access-Control-Allow-Origin"] = "https://msg-dashboard-2ku2.onrender.com"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, HEAD"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        
-        return response
-
-# Middleware hozzáadása
-app.add_middleware(CustomCORSMiddleware)
+# CORS beállítások
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://msg-dashboard-2ku2.onrender.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 @app.head("/")
