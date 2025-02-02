@@ -11,6 +11,7 @@ import json
 import base64
 import logging
 import traceback
+from skpy.core import SkypeAuthException
 
 class MessageService(ABC):
     def __init__(self, account_id: int, credentials: dict):
@@ -102,9 +103,14 @@ class SkypeService(MessageService):
     async def get_stats(self):
         try:
             print(f"Attempting to connect to Skype with username: {self.credentials['username']}")
-            sk = Skype(self.credentials['username'], self.credentials['password'])
-            print("Successfully connected to Skype")
-            
+            try:
+                sk = Skype(self.credentials['username'], self.credentials['password'])
+                print("Successfully connected to Skype")
+            except SkypeAuthException as auth_exc:
+                print(f"Skype authentication failed: {auth_exc}. Skipping Skype stats update.")
+                self.save_stats(0, 0, None)
+                return
+
             total_messages = 0
             unread_messages = 0
             oldest_unread_date = None
