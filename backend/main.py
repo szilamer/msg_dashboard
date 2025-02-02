@@ -1,6 +1,7 @@
 import os
 import logging
 import sys
+import traceback
 
 # Adatbázis elérési út beállítása
 if os.environ.get('RENDER'):
