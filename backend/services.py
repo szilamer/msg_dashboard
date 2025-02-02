@@ -10,6 +10,7 @@ import asyncio
 import json
 import base64
 import logging
+import traceback
 
 class MessageService(ABC):
     def __init__(self, account_id: int, credentials: dict):
@@ -89,7 +90,6 @@ class WhatsAppService(MessageService):
         except Exception as e:
             print(f"Error getting WhatsApp stats: {str(e)}")
             print(f"Error type: {type(e)}")
-            import traceback
             print(f"Full traceback: {traceback.format_exc()}")
             # Hiba esetén nullázzuk az értékeket
             self.save_stats(0, 0, None)
@@ -159,7 +159,6 @@ class SkypeService(MessageService):
         except Exception as e:
             print(f"Error getting Skype stats: {str(e)}")
             print(f"Error type: {type(e)}")
-            import traceback
             print(f"Full traceback: {traceback.format_exc()}")
             self.save_stats(0, 0, None)
 
@@ -212,7 +211,6 @@ class MessengerService(MessageService):
         except Exception as e:
             print(f"Error getting Messenger stats: {str(e)}")
             print(f"Error type: {type(e)}")
-            import traceback
             print(f"Full traceback: {traceback.format_exc()}")
             # Hiba esetén nullázzuk az értékeket
             self.save_stats(0, 0, None)
@@ -327,8 +325,7 @@ class HelpScoutService(MessageService):
         except Exception as e:
             self.logger.error(f"Error in HelpScout get_stats: {str(e)}")
             self.logger.error(f"Error type: {type(e)}")
-            import traceback
-            self.logger.error(f"Full traceback: {traceback.format_exc()}")
+            print(f"Full traceback: {traceback.format_exc()}")
             self.save_stats(0, 0, None)
 
 def get_service_class(account_type: str):
