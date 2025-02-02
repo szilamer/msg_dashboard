@@ -16,7 +16,11 @@ class MessageService(ABC):
     def __init__(self, account_id: int, credentials: dict):
         self.account_id = account_id
         self.credentials = credentials
-        self.db_path = os.path.join(os.path.dirname(__file__), 'messages.db')
+        if os.environ.get('RENDER'):
+            db_dir = '/opt/render/project/src'
+        else:
+            db_dir = os.path.dirname(__file__)
+        self.db_path = os.path.join(db_dir, 'messages.db')
 
     @abstractmethod
     async def get_stats(self):
@@ -339,7 +343,11 @@ def get_service_class(account_type: str):
 
 async def update_account_stats():
     try:
-        db_path = os.path.join(os.path.dirname(__file__), 'messages.db')
+        if os.environ.get('RENDER'):
+            db_dir = '/opt/render/project/src'
+        else:
+            db_dir = os.path.dirname(__file__)
+        db_path = os.path.join(db_dir, 'messages.db')
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
         c.execute("SELECT id, account_type, credentials FROM accounts WHERE is_active = TRUE")
